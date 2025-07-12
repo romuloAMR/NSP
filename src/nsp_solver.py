@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from networkx.algorithms import bipartite
 import numpy as np
+import graph_algorithms as ga
 
 class NurseScheduling:
     def __init__(
@@ -185,7 +186,7 @@ class NurseScheduling:
                 G2.add_edge(node, sink2, capacity=-demand_val)
 
         # Calc flow in H - G2
-        circ_flow_value, circ_flow_dict = nx.maximum_flow(G2, source2, sink2) #TODO: make our method
+        circ_flow_value, circ_flow_dict = ga.max_flow(G2, source2, sink2, method='edmonds-karp')
 
         # Viable flow test
         if round(total_demand, 0) != round(circ_flow_value, 0):
@@ -213,7 +214,7 @@ class NurseScheduling:
             if backward_cap > 0:
                 G_residual.add_edge(v, u, capacity=backward_cap)
 
-        aug_flow_value, aug_flow_dict = nx.maximum_flow(G_residual, self.s, self.t) #TODO: make our method
+        aug_flow_value, aug_flow_dict = ga.max_flow(G_residual, self.s, self.t, method='edmonds-karp')
         
         final_flow_dict = {u: {v: 0 for v in self.G.neighbors(u)} for u in self.G.nodes()}
         for u, v, _ in self.G.edges(data=True):
