@@ -173,20 +173,20 @@ class NurseScheduling:
 
         H.add_edge(self.t, self.s, capacity=float('inf'))
 
-        source2, sink2 = "s2", "t2"
-        H.add_node(source2, bipartite = -1)
-        H.add_node(sink2, bipartite = -1)
+        s2, t2 = "s2", "t2"
+        H.add_node(s2, bipartite = -1)
+        H.add_node(t2, bipartite = -1)
 
         total_demand = 0
         for node, demand_value in demands.items():
             if demand_value > 0:
-                H.add_edge(source2, node, capacity=demand_value)
+                H.add_edge(s2, node, capacity=demand_value)
                 total_demand += demand_value
             elif demand_value < 0:
-                H.add_edge(node, sink2, capacity=-demand_value)
+                H.add_edge(node, t2, capacity=-demand_value)
 
         # Calc flow in H
-        circ_flow_value, circ_flow_dict = ga.max_flow(H, source2, sink2, method='edmonds-karp')
+        circ_flow_value, circ_flow_dict = ga.max_flow(H, s2, t2, method="edmonds-karp")
 
         # Viable flow test
         if round(total_demand, 0) != round(circ_flow_value, 0):
@@ -215,7 +215,7 @@ class NurseScheduling:
                 G_residual.add_edge(v, u, capacity=backward_capacity)
 
         # Calc aug
-        _, aug_flow_dict = ga.max_flow(G_residual, self.s, self.t, method='edmonds-karp')
+        _, aug_flow_dict = ga.max_flow(G_residual, self.s, self.t, method="edmonds-karp")
         
         # Calc max flow
         final_flow_dict = {u: {v: 0 for v in self.G.neighbors(u)} for u in self.G.nodes()}
