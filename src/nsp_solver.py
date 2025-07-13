@@ -155,12 +155,12 @@ class NurseScheduling:
 
     def run(self):
 
-        self.G2 = self.G.copy()
+        self.H = self.G.copy()
 
         # Looking for a viable circulation
-        # Make H - G2
-        G2 = nx.DiGraph()
-        G2.add_nodes_from(self.G.nodes())
+        # Make H
+        H = nx.DiGraph()
+        H.add_nodes_from(self.G.nodes())
         
         demands = {node: 0 for node in self.G.nodes()}
         
@@ -169,24 +169,24 @@ class NurseScheduling:
             if lb > 0:
                 demands[u] -= lb
                 demands[v] += lb
-            G2.add_edge(u, v, capacity=data['capacity'] - lb)
+            H.add_edge(u, v, capacity=data['capacity'] - lb)
 
-        G2.add_edge(self.t, self.s, capacity=float('inf'))
+        H.add_edge(self.t, self.s, capacity=float('inf'))
 
         source2, sink2 = "s2", "t2"
-        G2.add_node(source2, bipartite = -1)
-        G2.add_node(sink2, bipartite = -1)
+        H.add_node(source2, bipartite = -1)
+        H.add_node(sink2, bipartite = -1)
 
         total_demand = 0
-        for node, demand_val in demands.items():
-            if demand_val > 0:
-                G2.add_edge(source2, node, capacity=demand_val)
-                total_demand += demand_val
-            elif demand_val < 0:
-                G2.add_edge(node, sink2, capacity=-demand_val)
+        for node, demand_value in demands.items():
+            if demand_value > 0:
+                H.add_edge(source2, node, capacity=demand_value)
+                total_demand += demand_value
+            elif demand_value < 0:
+                H.add_edge(node, sink2, capacity=-demand_value)
 
-        # Calc flow in H - G2
-        circ_flow_value, circ_flow_dict = ga.max_flow(G2, source2, sink2, method='edmonds-karp')
+        # Calc flow in H
+        circ_flow_value, circ_flow_dict = ga.max_flow(H, source2, sink2, method='edmonds-karp')
 
         # Viable flow test
         if round(total_demand, 0) != round(circ_flow_value, 0):
@@ -196,31 +196,33 @@ class NurseScheduling:
             return None
         
         # Viable flow
-        f_viable = {u: {v: 0 for v in self.G.neighbors(u)} for u in self.G.nodes()}
+        flow_viable = {u: {v: 0 for v in self.G.neighbors(u)} for u in self.G.nodes()}
         for u, v, data in self.G.edges(data=True):
             lb = data.get('lb', 0)
             circ_flow = circ_flow_dict.get(u, {}).get(v, 0)
-            f_viable[u][v] = lb + circ_flow
+            flow_viable[u][v] = lb + circ_flow
 
-        # Fix
         # Max Flow
+        # Make residual graph
         G_residual = nx.DiGraph()
         for u, v, data in self.G.edges(data=True):
-            forward_cap = data['capacity'] - f_viable[u][v]
-            if forward_cap > 0:
-                G_residual.add_edge(u, v, capacity=forward_cap)
+            forward_capacity = data['capacity'] - flow_viable[u][v]
+            if forward_capacity > 0:
+                G_residual.add_edge(u, v, capacity=forward_capacity)
             
-            backward_cap = f_viable[u][v] - data.get('lb', 0)
-            if backward_cap > 0:
-                G_residual.add_edge(v, u, capacity=backward_cap)
+            backward_capacity = flow_viable[u][v] - data.get('lb', 0)
+            if backward_capacity > 0:
+                G_residual.add_edge(v, u, capacity=backward_capacity)
 
-        aug_flow_value, aug_flow_dict = ga.max_flow(G_residual, self.s, self.t, method='edmonds-karp')
+        # Calc aug
+        _, aug_flow_dict = ga.max_flow(G_residual, self.s, self.t, method='edmonds-karp')
         
+        # Calc max flow
         final_flow_dict = {u: {v: 0 for v in self.G.neighbors(u)} for u in self.G.nodes()}
-        for u, v, _ in self.G.edges(data=True):
+        for u, v in self.G.edges():
             aug_flow = aug_flow_dict.get(u, {}).get(v, 0)
             rev_aug_flow = aug_flow_dict.get(v, {}).get(u, 0)
-            final_flow_dict[u][v] = f_viable[u][v] + aug_flow - rev_aug_flow
+            final_flow_dict[u][v] = flow_viable[u][v] + aug_flow - rev_aug_flow
             
         # Show Results
         nurses, shifts = self.get_partitions()
