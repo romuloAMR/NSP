@@ -238,5 +238,8 @@ class NurseScheduling:
                 print(f"- {nurse}: {', '.join(sorted(assigned_shifts))}")
             else:
                  print(f"- {nurse}: No shifts")
-
-        return final_flow_dict
+        final_result = {
+            'total_alocated': total_shifts_assigned,
+            'assignments': final_flow_dict
+        }
+        return final_result
