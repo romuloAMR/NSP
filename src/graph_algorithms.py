@@ -34,34 +34,31 @@ def edmonds_karp_max_flow(G, s, t):
         if not G_residual.has_edge(v, u):
             G_residual.add_edge(v, u, capacity=0)
 
+    flow = {u: {v: 0 for v in G.neighbors(u)} for u in G.nodes()}
     max_flow = 0
     while True:
         # Find an augmenting path in the residual graph
         path = bfs_augmenting_path(G_residual, s, t)
-        
         if not path:
             break
 
-        path_flow = float('inf')
-        for i in range(len(path) - 1):
-            u, v = path[i], path[i+1]
-            path_flow = min(path_flow, G_residual.edges[u, v].get('capacity', 0))
+        # Find minimum residual capacity along the path
+        path_flow = min(G_residual[u][v]['capacity'] for u, v in zip(path, path[1:]))
+
+        # Update residual capacities and flow
+        for u, v in zip(path, path[1:]):
+            if G_residual.has_edge(u, v):
+                G_residual[u][v]['capacity'] -= path_flow
+                G_residual[v][u]['capacity'] += path_flow
+                
+                if G.has_edge(u, v):
+                    flow[u][v] += path_flow
+                else:
+                    flow[v][u] -= path_flow
 
         max_flow += path_flow
 
-        for i in range(len(path) - 1):
-            u, v = path[i], path[i+1]
-            G_residual.edges[u, v]['capacity'] -= path_flow
-            G_residual.edges[v, u]['capacity'] += path_flow
-
-    flow_dict = {u: {} for u in G.nodes()}
-    for u, v in G.edges():
-        # The flow on an edge (u,v) is the capacity of the reverse edge (v,u) in the residual
-        flow = G_residual.get_edge_data(v, u, default={'capacity': 0})['capacity']
-        if flow > 0:
-            flow_dict[u][v] = flow
-
-    return max_flow, flow_dict
+    return max_flow, flow
 
 def build_layered_network(G_residual, s, t):
     level = {s: 0}
